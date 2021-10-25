@@ -52,10 +52,10 @@ func main() {
 	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 
 	// 通过命名路由获取 URL 示例
-	homeURL, _ := router.Get("home").URL()
-	fmt.Println("homeURL: ", homeURL)
-	articleURL, _ := router.Get("articles.show").URL("id", "23")
-	fmt.Println("articleURL: ", articleURL)
+	// homeURL, _ := router.Get("home").URL()
+	// fmt.Println("homeURL: ", homeURL)
+	// articleURL, _ := router.Get("articles.show").URL("id", "23")
+	// fmt.Println("articleURL: ", articleURL)
 
 	http.ListenAndServe(":3000", router)
 }
