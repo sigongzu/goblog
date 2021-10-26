@@ -2,8 +2,11 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
+	"net/url"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gorilla/mux"
 )
@@ -34,18 +37,76 @@ func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "访问文章列表")
 }
 
+type ArticlesFormData struct {
+	Title, Body string
+	URL         *url.URL
+	Errors      map[string]string
+}
+
 func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		fmt.Fprint(w, "请提供正确数据")
-		return
+
+	title := r.PostFormValue("title")
+	body := r.PostFormValue("body")
+
+	errors := make(map[string]string)
+
+	if title == "" {
+		errors["title"] = "标题不可空"
+	} else if utf8.RuneCountInString(title) < 3 || utf8.RuneCountInString(title) > 40 {
+		errors["title"] = "标题长度介于3-40"
 	}
 
-	title := r.PostForm.Get("title")
+	if body == "" {
+		errors["body"] = "内容不可空"
+	} else if utf8.RuneCountInString(body) < 10 {
+		errors["body"] = "内容要长度大于9"
+	}
 
-	fmt.Fprintf(w, "post postform:%v<br>", r.PostForm)
-	fmt.Fprintf(w, "post form:%v<br>", r.Form)
-	fmt.Fprintf(w, "title:%v<br>", title)
+	if len(errors) == 0 {
+		fmt.Fprint(w, "验证通过<br>")
+		fmt.Fprintf(w, "%v<br>", title)
+		fmt.Fprintf(w, "%v<br>", utf8.RuneCountInString(title))
+		fmt.Fprintf(w, "%v<br>", body)
+		fmt.Fprintf(w, "%v<br>", utf8.RuneCountInString(body))
+	} else {
+		html := `
+		<!DOCTYPE html>
+		<html lang="en">
+		<head>
+			<title>创建文章 —— 我的技术博客</title>
+			<style type="text/css">.error {color: red;}</style>
+		</head>
+		<body>
+			<form action="{{ .URL }}" method="post">
+				<p><input type="text" name="title" value="{{ .Title }}"></p>
+				{{ with .Errors.title }}
+				<p class="error">{{ . }}</p>
+				{{ end }}
+				<p><textarea name="body" cols="30" rows="10">{{ .Body }}</textarea></p>
+				{{ with .Errors.body }}
+				<p class="error">{{ . }}</p>
+				{{ end }}
+				<p><button type="submit">提交</button></p>
+			</form>
+		</body>
+		</html>
+		`
+		storeURL, _ := router.Get("articles.store").URL()
+
+		data := ArticlesFormData{
+			Title:  title,
+			Body:   body,
+			URL:    storeURL,
+			Errors: errors,
+		}
+
+		tmpl, err := template.New("create-form").Parse(html)
+		if err != nil {
+			panic(err)
+		}
+
+		tmpl.Execute(w, data)
+	}
 }
 
 func forceHTMLMiddleware(next http.Handler) http.Handler {
