@@ -33,10 +33,34 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<h1>Hello, not found :(</h1>")
 }
 
+type Article struct {
+	Title, Body string
+	ID          int64
+}
+
 func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	fmt.Fprint(w, "文章ID："+id)
+
+	article := Article{}
+	query := "select * from articles where id=?"
+	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 文章未找到")
+		} else {
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 服务器内部错误")
+		}
+	} else {
+		tmpl, err := template.ParseFiles("resources/views/articles/show.gohtml")
+		checkError(err)
+
+		tmpl.Execute(w, article)
+	}
 }
 
 func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -78,28 +102,7 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 服务器错误")
 		}
 	} else {
-		// html := `
-		// <!DOCTYPE html>
-		// <html lang="en">
-		// <head>
-		// 	<title>创建文章 —— 我的技术博客</title>
-		// 	<style type="text/css">.error {color: red;}</style>
-		// </head>
-		// <body>
-		// 	<form action="{{ .URL }}" method="post">
-		// 		<p><input type="text" name="title" value="{{ .Title }}"></p>
-		// 		{{ with .Errors.title }}
-		// 		<p class="error">{{ . }}</p>
-		// 		{{ end }}
-		// 		<p><textarea name="body" cols="30" rows="10">{{ .Body }}</textarea></p>
-		// 		{{ with .Errors.body }}
-		// 		<p class="error">{{ . }}</p>
-		// 		{{ end }}
-		// 		<p><button type="submit">提交</button></p>
-		// 	</form>
-		// </body>
-		// </html>
-		// `
+
 		storeURL, _ := router.Get("articles.store").URL()
 
 		data := ArticlesFormData{
@@ -109,7 +112,6 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 			Errors: errors,
 		}
 
-		// tmpl, err := template.New("create-form").Parse(html)
 		tmpl, err := template.ParseFiles("resources/views/articles/create.gohtml")
 		if err != nil {
 			panic(err)
@@ -166,21 +168,7 @@ func removeTrailingSlash(next http.Handler) http.Handler {
 }
 
 func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
-	// html := `
-	// <!DOCTYPE html>
-	// <html lang="en">
-	// <head>
-	// 	<title>创建文章 —— 我的技术博客</title>
-	// </head>
-	// <body>
-	// 	<form action="%s?test=data" method="post">
-	// 		<p><input type="text" name="title"></p>
-	// 		<p><textarea name="body" cols="30" rows="10"></textarea></p>
-	// 		<p><button type="submit">提交</button></p>
-	// 	</form>
-	// </body>
-	// </html>
-	// `
+
 	storeURL, _ := router.Get("articles.store").URL()
 	data := ArticlesFormData{
 		Title:  "",
