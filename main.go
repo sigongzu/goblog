@@ -8,11 +8,10 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf8"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"github.com/sigongzu/goblog/pkg/database"
 	"github.com/sigongzu/goblog/pkg/logger"
 	"github.com/sigongzu/goblog/pkg/route"
 	"github.com/sigongzu/goblog/pkg/types"
@@ -394,45 +393,10 @@ func (a Article) Delete() (rowsAffected int64, err error) {
 	return 0, nil
 }
 
-func initDB() {
-	var err error
-	config := mysql.Config{
-		User:                 "root",
-		Passwd:               "jkdf1212",
-		Addr:                 "127.0.0.1:3306",
-		Net:                  "tcp",
-		DBName:               "gitgoblog",
-		AllowNativePasswords: true,
-	}
-
-	db, err = sql.Open("mysql", config.FormatDSN())
-	logger.LogError(err)
-
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(5 * time.Minute)
-
-	err = db.Ping()
-	logger.LogError(err)
-}
-
-func createTables() {
-	createArticlesSQL := `
-	create table if not exists articles(
-		id bigint(20) primary key auto_increment not null,
-		title varchar(255) collate utf8mb4_unicode_ci not null,
-		body longtext collate utf8mb4_unicode_ci
-	);
-	`
-
-	_, err := db.Exec(createArticlesSQL)
-	logger.LogError(err)
-}
-
 func main() {
 
-	initDB()
-	createTables()
+	database.Initialize()
+	db = database.DB
 
 	route.Initialize()
 	router = route.Router
