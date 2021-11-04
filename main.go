@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sigongzu/goblog/pkg/logger"
 	"github.com/sigongzu/goblog/pkg/route"
+	"github.com/sigongzu/goblog/pkg/types"
 )
 
 // var router = mux.NewRouter()
@@ -72,7 +73,7 @@ func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		tmpl, err := template.New("show.gohtml").Funcs(template.FuncMap{
 			"RouteName2URL": route.Name2URL,
-			"Int64ToString": Int64ToString,
+			"Int64ToString": types.Int64ToString,
 		}).ParseFiles("resources/views/articles/show.gohtml")
 		logger.LogError(err)
 
@@ -377,10 +378,6 @@ func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-}
-
-func Int64ToString(num int64) string {
-	return strconv.FormatInt(num, 10)
 }
 
 func (a Article) Delete() (rowsAffected int64, err error) {
